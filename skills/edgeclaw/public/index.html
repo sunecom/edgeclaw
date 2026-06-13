@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EdgeClaw — Real Node</title>
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Courier New', monospace; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .panel { background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .status-on { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 9999px; background: #064e3b; color: #34d399; font-weight: bold; font-size: 0.875rem; }
+        .status-off { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 9999px; background: #7f1d1d; color: #fca5a5; font-weight: bold; font-size: 0.875rem; }
+        .dot-on { height: 8px; width: 8px; background-color: #34d399; border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px #34d399; }
+        .dot-off { height: 8px; width: 8px; background-color: #ef4444; border-radius: 50%; margin-right: 8px; }
+        .btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        button { background: #1e293b; border: 1px solid #475569; color: white; padding: 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: bold; font-size: 0.9rem; }
+        button:hover { background: #0ea5e9; border-color: #0ea5e9; }
+        button.danger:hover { background: #ef4444; border-color: #ef4444; }
+        .cmd-result { margin-top: 8px; padding: 8px; background: #0f172a; border-radius: 4px; font-size: 0.8rem; color: #34d399; min-height: 20px; border: 1px dashed #334155; }
+        #logs { height: 300px; overflow-y: auto; background: #020617; padding: 12px; border-radius: 6px; font-size: 0.8rem; color: #94a3b8; border: 1px solid #1e293b; white-space: pre-wrap; word-break: break-all; }
+        .cyan { color: #22d3ee; }
+        .tag { display: inline-block; background: #1e293b; color: #94a3b8; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel header">
+            <div>
+                <h1 style="color: #22d3ee; margin: 0;">EDGECLAW <span style="font-size: 0.8rem; color: #64748b;">v4</span></h1>
+                <p style="color: #94a3b8; margin: 4px 0 0;">LigoWave 真实节点控制台 <span class="tag">REAL</span></p>
+                <p style="color: #64748b; font-size: 0.75rem; margin: 6px 0 0;">
+                    <span id="nodeHeartbeat" style="color: #94a3b8;">⏳ 心跳: --</span>
+                    &nbsp;·&nbsp;
+                    <span id="nodeStatusInfo" style="color: #94a3b8;">⏹ 等待...</span>
+                </p>
+            </div>
+            <div id="statusBadge">
+                <span class="status-off"><span class="dot-off"></span> OFFLINE</span>
+            </div>
+        </div>
+        <div class="panel">
+            <h3 style="color: #22d3ee; margin-top: 0;">COMMAND CENTER</h3>
+            <div style="margin-bottom: 12px;">
+                <label style="color: #94a3b8; font-size: 0.85rem;">Target Device: </label>
+                <select id="deviceSelect" onchange="onDeviceChange()" style="background: #1e293b; border: 1px solid #475569; color: #e2e8f0; padding: 6px 10px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 0.85rem;">
+                    <option value="">-- Select Device --</option>
+                </select>
+                <span id="deviceCount" style="color: #64748b; font-size: 0.75rem; margin-left: 8px;"></span>
+                <span style="margin-left: 12px;">
+                    <input type="text" id="aliasInput" placeholder="备注名称" 
+                        style="background: #1e293b; border: 1px solid #475569; color: #e2e8f0; padding: 6px 8px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 0.8rem; width: 120px;">
+                    <button onclick="saveAlias()" style="background: #0ea5e9; border: none; color: white; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; margin-left: 4px;">保存</button>
+                </span>
+            </div>
+            <div class="btn-grid">
+                <div>
+                    <button onclick="sendCmd('ping')">PING NODE</button>
+                    <div id="res-ping" class="cmd-result">Waiting...</div>
+                </div>
+                <div>
+                    <button onclick="sendCmd('status')">GET STATUS</button>
+                    <div id="res-status" class="cmd-result">Waiting...</div>
+                </div>
+                <div>
+                    <button onclick="sendCmd('scan_wifi')">SCAN WIFI</button>
+                    <div id="res-scan" class="cmd-result">Waiting...</div>
+                </div>
+                <div>
+                    <button class="danger" onclick="sendCmd('reboot')">REBOOT</button>
+                    <div id="res-reboot" class="cmd-result">Waiting...</div>
+                </div>
+                <div>
+                    <button onclick="sendCmd('refresh_load')">REFRESH LOAD</button>
+                    <div id="res-refresh" class="cmd-result">Waiting...</div>
+                </div>
+                <div>
+                    <button onclick="sendCmd('net_status')">NET STATUS</button>
+                    <div id="res-net" class="cmd-result">Waiting...</div>
+                </div>
+                <div>
+                    <button onclick="sendCmd('sys_info')">SYS INFO</button>
+                    <div id="res-sys" class="cmd-result">Waiting...</div>
+                </div>
+                <div>
+                    <button onclick="sendCmd('signal_quality')">SIGNAL QUALITY</button>
+                    <div id="res-signal" class="cmd-result">Waiting...</div>
+                </div>
+            </div>
+        </div>
+        <div class="panel">
+            <h3 style="color: #22d3ee; margin-top: 0;">SYSTEM LOGS</h3>
+            <div id="logs"></div>
+        </div>
+    </div>
+
+    <script>
+        const logDiv = document.getElementById('logs');
+        const badgeDiv = document.getElementById('statusBadge');
+        const hbSpan = document.getElementById('nodeHeartbeat');
+        const infoSpan = document.getElementById('nodeStatusInfo');
+        
+        let lastHeartbeatTime = null;
+        let nodeConnected = false;
+
+        // 每秒更新显示状态
+        setInterval(() => {
+            if (nodeConnected) {
+                if (lastHeartbeatTime) {
+                    const sec = Math.floor((Date.now() - lastHeartbeatTime) / 1000);
+                    if (sec < 10) {
+                        hbSpan.innerHTML = `💚 心跳: ${sec}s前`;
+                        hbSpan.style.color = '#34d399';
+                    } else if (sec < 30) {
+                        hbSpan.innerHTML = `💛 心跳: ${sec}s前`;
+                        hbSpan.style.color = '#facc15';
+                    } else {
+                        hbSpan.innerHTML = `❤️ 心跳: ${sec}s前`;
+                        hbSpan.style.color = '#ef4444';
+                    }
+                }
+                infoSpan.innerHTML = '🟢 双管道正常';
+                infoSpan.style.color = '#34d399';
+            } else {
+                hbSpan.innerHTML = '⏳ 心跳: 无';
+                hbSpan.style.color = '#94a3b8';
+                infoSpan.innerHTML = '🔴 离线';
+                infoSpan.style.color = '#ef4444';
+            }
+        }, 1000);
+
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.style.marginBottom = '4px';
+            div.innerHTML = `<span style="color: #475569;">[${time}]</span> ${msg}`;
+            logDiv.appendChild(div);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            if (connected) {
+                badgeDiv.innerHTML = '<span class="status-on"><span class="dot-on"></span> ONLINE</span>';
+            } else {
+                badgeDiv.innerHTML = '<span class="status-off"><span class="dot-off"></span> OFFLINE</span>';
+            }
+        }
+
+        function getSelectedDevice() {
+            const sel = document.getElementById('deviceSelect');
+            return sel ? sel.value : '';
+        }
+
+        async function sendCmd(cmd) {
+            let resId = `res-${cmd}`;
+            if (cmd === 'scan_wifi') resId = 'res-scan';
+            if (cmd === 'refresh_load') resId = 'res-refresh';
+            if (cmd === 'net_status') resId = 'res-net';
+            if (cmd === 'sys_info') resId = 'res-sys';
+            if (cmd === 'signal_quality') resId = 'res-signal';
+            
+            const deviceId = getSelectedDevice();
+            if (!deviceId) {
+                addLog('❌ Please select a target device first!');
+                alert('Please select a target device from the dropdown!');
+                return;
+            }
+            
+            const resDiv = document.getElementById(resId);
+            if (!resDiv) return;
+            resDiv.innerText = 'Executing...';
+            addLog(`📤 [${deviceId}] Sending: ${cmd}...`);
+            try {
+                const res = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cmd, deviceId })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    resDiv.innerText = `Sent! (${deviceId})`;
+                    addLog(`✅ [${deviceId}] Command [${cmd}] sent successfully.`);
+                } else {
+                    resDiv.innerText = `Error: ${data.message}`;
+                    addLog(`❌ [${deviceId}] Failed: ${data.message}`);
+                }
+            } catch (err) {
+                resDiv.innerText = 'Network Error';
+                addLog(`❌ Error: ${err.message}`);
+            }
+        }
+
+        // WebSocket 连接
+        let ws;
+        function updateDeviceList(devices) {
+            const sel = document.getElementById('deviceSelect');
+            const countSpan = document.getElementById('deviceCount');
+            if (!sel) return;
+            const currentVal = sel.value;
+            sel.innerHTML = '';
+            if (!devices || devices.length === 0) {
+                sel.innerHTML = '<option value="">-- No Device Connected --</option>';
+                if (countSpan) countSpan.innerText = '(0 nodes)';
+                return;
+            }
+            devices.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.setAttribute('data-alias', d.alias || '');
+                const displayName = d.alias ? `${d.alias} (${d.id})` : `${d.id} (${d.remoteAddress})`;
+                opt.textContent = displayName;
+                sel.appendChild(opt);
+            });
+            // 保持选中状态或默认选第一个
+            if (currentVal && devices.some(d => d.id === currentVal)) {
+                sel.value = currentVal;
+            } else {
+                sel.value = devices[0].id;
+            }
+            onDeviceChange();
+            if (countSpan) countSpan.innerText = `(${devices.length} node${devices.length > 1 ? 's' : ''})`;
+        }
+
+        function onDeviceChange() {
+            const sel = document.getElementById('deviceSelect');
+            const input = document.getElementById('aliasInput');
+            if (!sel || !input) return;
+            const selectedId = sel.value;
+            if (!selectedId) {
+                input.value = '';
+                input.disabled = true;
+                return;
+            }
+            input.disabled = false;
+            // 从下拉框选项的 data-alias 属性获取当前别名
+            const opt = sel.querySelector('option[value="' + selectedId + '"]');
+            const currentAlias = opt ? opt.getAttribute('data-alias') || '' : '';
+            input.value = currentAlias;
+            input.placeholder = currentAlias || '输入备注名称';
+        }
+
+        async function saveAlias() {
+            const sel = document.getElementById('deviceSelect');
+            const input = document.getElementById('aliasInput');
+            if (!sel || !input || !sel.value) {
+                alert('请先选择设备');
+                return;
+            }
+            const alias = input.value.trim();
+            if (!alias) {
+                alert('请输入备注名称');
+                return;
+            }
+            try {
+                const res = await fetch('/api/setalias', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceId: sel.value, alias })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    addLog(`🏷️ Device [${sel.value}] alias set to "${alias}"`);
+                }
+            } catch (err) {
+                addLog(`❌ Error saving alias: ${err.message}`);
+            }
+        }
+
+        function connectWS() {
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}/ws`);
+            
+            ws.onopen = () => {
+                addLog('🔗 WebSocket connected');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === 'status') {
+                        nodeConnected = true;
+                        lastHeartbeatTime = Date.now();
+                        updateStatus(true);
+                        const tag = msg.deviceId ? `[${msg.deviceId}]` : '';
+                        addLog(`<span class="cyan">📡 ${tag}[MQTT]</span> ${msg.data}`);
+                    }
+                    if (msg.type === 'cmd_result') {
+                        const tag = msg.deviceId ? `[${msg.deviceId}]` : '';
+                        addLog(`<span style="color:#22d3ee;">🖥️ CMD Result ${tag}:</span>`);
+                        const lines = msg.data.split('\n');
+                        lines.forEach(line => {
+                            if (line.trim()) addLog(`  ${line}`);
+                        });
+                    }
+                    if (msg.type === 'devices') {
+                        updateDeviceList(msg.data);
+                    }
+                } catch (e) {
+                    console.error('WS parse error:', e);
+                }
+            };
+            
+            ws.onclose = () => {
+                nodeConnected = false;
+                updateStatus(false);
+                addLog('❌ WebSocket disconnected, reconnecting...');
+                setTimeout(connectWS, 3000);
+            };
+            
+            ws.onerror = (err) => {
+                console.error('WS error:', err);
+            };
+        }
+        
+        connectWS();
+
+        addLog('🚀 EdgeClaw v2.0 — 仅连接真实 LigoWave 节点');
+    </script>
+</body>
+</html>

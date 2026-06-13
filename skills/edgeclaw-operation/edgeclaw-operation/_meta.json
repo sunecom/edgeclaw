@@ -1,0 +1,34 @@
+{
+  "name": "EdgeClaw 设备操控 Skill",
+  "status": "已上线",
+  "version": "v1.0",
+  "项目定位": "通过智能体 API 直接向 EdgeClaw 边缘节点下发指令并获取执行结果，无需人工操作控制台",
+  "底层逻辑": "智能体 → HTTP POST /api/agent/command → Node.js 服务器 → CMD 端口 19999 → 路由器 select 实时读取 → 执行 → 结果回传",
+  "依赖": {
+    "平台": "EdgeClaw 边缘节点项目（skills/edgeclaw/）",
+    "服务器": "server.js 必须运行，端口 3001",
+    "路由器": "monitor_edgeclaw 客户端必须在路由器上运行",
+    "设备列表": "devices.json 中记录了设备 ID 和别名"
+  },
+  "API": {
+    "端点": "POST /api/agent/command",
+    "地址": "http://localhost:3001/api/agent/command",
+    "请求格式": "{\"cmd\":\"指令名\",\"deviceId\":\"设备ID(可选)\"}",
+    "返回格式": "{\"status\":\"success\",\"deviceId\":\"...\",\"command\":\"...\",\"result\":\"...\"}",
+    "超时": "5 秒"
+  },
+  "设备标识": {
+    "ec-17A42C": "家用路由",
+    "ec-17A1FE": "测试机110"
+  },
+  "可用指令": [
+    "ping → pong",
+    "net_status → ifconfig",
+    "refresh_load → cat /proc/loadavg",
+    "scan_wifi → iwinfo",
+    "reboot → 重启路由器",
+    "sys_info → CPU/版本/运行时间/内存",
+    "signal_quality → ath0+ath1 信号质量"
+  ],
+  "tags": ["EdgeClaw", "设备操控", "远程控制", "MIPS", "LigoWave", "智能体API"]
+}
